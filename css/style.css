@@ -1,0 +1,44 @@
+body {
+    font-size: 12px;
+    font-family: Arial, "Helvetica Neue", sans-serif;
+}
+
+h1 {
+    font-size: 20px;
+    margin: 0 0 20px;
+    line-height: 1;
+    padding-bottom: 10px;
+    border-bottom: 1px #eee solid;
+}
+
+#wrapper {
+    max-width: 900px;
+    margin: 0 auto;
+    position: relative;
+}
+
+.loader {
+    background: url("../img/ajax-loader.gif") no-repeat 0 0;
+    width: 16px;
+    height: 16px;
+    position: absolute;
+    right: 0;
+    top: 4px;
+}
+
+.loader.-hidden {
+    display: none;
+}
+
+
+#gallery {
+ margin-left: -20px;
+}
+
+
+#gallery .image {
+    margin-left: 20px;
+    width: 150px;
+    display: inline-block;
+    vertical-align: top;
+}
