@@ -1,75 +1,100 @@
 var GalleryApp = GalleryApp || {};
 
 
+/**
+ * @param element jQuery Selector or string
+ * @constructor
+ */
 GalleryApp.Gallery = function (element) {
     this.wrapper = typeof element == 'string' ? $(element) : element;
     this.photos = [];
+
+    this.galleryWrapper = null;
+    this.photosContainer = null;
+    this.bigPhotoContainer = null;
 };
+// todo - добавить кол-ко фоток в конструктор
+
 
 GalleryApp.Gallery.prototype = {
+    /**
+     * @param params Json with callbacks. onSuccess, onError
+     */
     init:  function(params) {
-        var api = new GalleryApp.FlickrApi();
+
+        this.generateHtmlWrappers();
 
         var self = this;
 
+        this.photosContainer.addClass('-loading');
+
+        var api = new GalleryApp.FlickrApi();
+
         $.when(api.getRecentPhotos()).then(function(flickrObjects){
+
+            self.photosContainer.removeClass('-loading');
+
+            console.log('Get All Flickr Objects');
             console.log(flickrObjects);
 
             if (flickrObjects) {
+
                 $.each(flickrObjects, function(index, photo) {
-                    self.addPhoto(GalleryApp.CreatePhoto(photo));
+                    self.addPhoto( GalleryApp.CreatePhoto(photo) );
                 });
 
-                if (params.onSuccess) {
-                    self.generateHtml();
-                    self.registerEvents();
-                    params.onSuccess();
-                }
+                self.generatePhotosHtml();
+                self.registerEvents();
 
             } else {
-                if (params.onError) {
-                    params.onError();
-                }
+                //todo error
             }
         });
     },
+
 
     addPhoto: function (photo) {
         this.photos.push(photo);
     },
 
-    generateHtml: function () {
+
+    generatePhotosHtml: function () {
         var self = this;
-
-        var galleryWrapper = self.wrapper.append('<div id="gallery"></div>'); //todo переделать
-        var photoHolder = $('#gallery').append('<div class="images"></div>');
-        var bigPhoto = $('#gallery').append('<div class="big-image"><img src="" alt="" /><p><a href="#">Go Back</a></p></div>');
-
         this.photos.forEach(function (photo) {
-            $('#gallery .images').append('<div class="image"><a class="image-link" href="'+photo.getOriginalImage()+'"><img src="' + photo.getImageThumb() + '" alt="" /></a><p>"' + photo.title + '</p><p><a target="_blank" href="' + photo.getUserLink() + '">>> More</a></p></div>');
+            self.photosContainer.append('<div class="image"><a class="image-link" href="'+photo.getOriginalImage()+'"><img src="' + photo.getImageThumb() + '" alt="" /></a><p>"' + photo.title + '</p><p><a target="_blank" href="' + photo.getUserLink() + '">>> More</a></p></div>');
         });
+    },
 
-        self.wrapper.append('');
+    generateHtmlWrappers: function() {
+        this.galleryWrapper =$('<div id="gallery"></div>').appendTo(this.wrapper);
+        this.photosContainer = $('<div class="images"></div>').appendTo(this.galleryWrapper);
+        this.bigPhotoContainer = $('<div class="big-image"><div class="big-image-container"><img src="" alt="" /></div><p><a href="#">Go Back</a></p></div>').appendTo(this.galleryWrapper);
     },
 
     registerEvents: function() {
         var self = this;
-        $('.image-link', self.wrapper).on('click', function(e) {
-            e.preventDefault();
-            $('.hover-image img', self.wrapper).attr('src', '');
-            var src = $(this).attr('href');
-            if (src) {
-                $('.big-image img', self.wrapper).attr('src', src);
 
-                $('.big-image img', self.wrapper).load(function () {
-                    $('#gallery', self.wrapper).addClass('big-image');
-                });
+        $('.image-link', this.photosContainer).on('click', function(e) {
+            e.preventDefault();
+            // todo попробовать переделать на массив с картинками
+            var src = $(this).attr('href');
+
+            if (src) {
+                var img = $('.big-image img', self.wrapper);
+
+                img.attr('src', src).hide();
+
+                self.galleryWrapper.addClass('big-image');
+
+                img.load(function(){
+                    img.show();
+                })
             }
         });
 
 
-        $('.big-image a, .big-image img', self.wrapper).on('click', function() {
-            $('#gallery', self.wrapper).removeClass('big-image');
+        $(this.bigPhotoContainer).on('click', function() {
+            $(self.galleryWrapper).removeClass('big-image');
         });
     }
 };
@@ -92,7 +117,12 @@ GalleryApp.Photo.prototype = {
     },
 
     getOriginalImage: function() {
-        return this.sizes[7].source;
+        var bestImageSizeIndex = 8;
+        for (var i = bestImageSizeIndex; i>=0, i--;) {
+            if (this.sizes[i] != undefined) {
+                return this.sizes[i].source;
+            }
+        }
     }
 };
 
@@ -134,7 +164,10 @@ GalleryApp.FlickrApi.prototype.getRecentPhotos = function () {
             promise = promise.then(function () {
                 return self._apiCall(self.methods.size, {photo_id:photo.id});
             }).then(function(r) {
+                console.log('Get photo sizes: ');
+                console.log(r);
                 photo.sizes = r.sizes.size;
+                console.log('Get Photo size.. print photo object. Size count is - ');
                 console.log(photo);
             });
         });
