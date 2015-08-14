@@ -1,7 +1,6 @@
 var GalleryApp = GalleryApp || {};
 
 
-
 /**
  * Main application class. Generate html, register all events, store images.
  * @constructor
@@ -10,15 +9,13 @@ var GalleryApp = GalleryApp || {};
  */
 GalleryApp.Gallery = function (element, params) {
 
-    var defaults = {per_page: 20, debug: true};
+    var defaults = {per_page: 20};
 
     this.wrapper = typeof element == 'string' ? $(element) : element;
     this.photos = [];
     this.api = new GalleryApp.FlickrApi();
 
     this.params = $.extend({}, defaults, params);
-
-    GalleryApp.Loggger.debug = this.params.debug;
 
     this.galleryWrapper = null;
     this.photosContainer = null;
@@ -28,30 +25,32 @@ GalleryApp.Gallery = function (element, params) {
 
 GalleryApp.Gallery.prototype = {
 
-    init:  function() {
+    init: function () {
         var self = this;
 
         this.generateHtmlWrappers();
 
         this.showLoader();
 
-        $.when(this.api.getRecentPhotos(this.params.per_page)).then(function(flickrObjects){
+        $.when(this.api.getRecentPhotos(this.params.per_page)).then(function (flickrObjects) {
 
             self.hideLoader();
 
             GalleryApp.Loggger.log('Get All Flickr Objects');
             GalleryApp.Loggger.log(flickrObjects);
 
-            if (Array.isArray(flickrObjects)) {
+            if (flickrObjects) {
 
-                $.each(flickrObjects, function(index, photo) {
-                    self.addPhoto(new GalleryApp.Photo(photo) );
+                $.each(flickrObjects, function (index, photo) {
+                    self.addPhoto(new GalleryApp.Photo(photo));
                 });
 
                 self.generatePhotosHtml();
                 self.registerEvents();
 
             }
+        }, function (jqXHR, textStatus, errorThrown) {
+            this.showError('Failed to complete request. Try again later. <a href=".">Refresh then page</a>');
         });
     },
 
@@ -84,38 +83,44 @@ GalleryApp.Gallery.prototype = {
         });
     },
 
-    generateHtmlWrappers: function() {
+    showError: function (message) {
+        var template = '<p class="error">{{message}}</p>';
+        this.hideLoader();
+        this.photosContainer.append(GalleryApp.TemplateEngine.process(template, {message: message}));
+    },
+
+    generateHtmlWrappers: function () {
         GalleryApp.Loggger.log('generateHtmlWrappers');
 
-        this.galleryWrapper =$('<div id="gallery"></div>').appendTo(this.wrapper);
+        this.galleryWrapper = $('<div id="gallery"></div>').appendTo(this.wrapper);
         this.photosContainer = $('<div class="images"></div>').appendTo(this.galleryWrapper);
         this.bigPhotoContainer = $('<div class="big-image"><div class="big-image-container"><img src="" alt="" /></div><p><a href="#">Go Back</a></p></div>').appendTo(this.galleryWrapper);
     },
 
-    showLoader: function() {
+    showLoader: function () {
         GalleryApp.Loggger.log('showLoader');
         this.photosContainer.addClass('-loading');
     },
 
-    hideLoader: function() {
+    hideLoader: function () {
         GalleryApp.Loggger.log('hideLoader');
         this.photosContainer.removeClass('-loading');
     },
 
-    showBigImage: function() {
+    showBigImage: function () {
         GalleryApp.Loggger.log('showBigImage');
         this.galleryWrapper.addClass('big-image');
     },
 
-    hideBigImage: function() {
+    hideBigImage: function () {
         GalleryApp.Loggger.log('hideBigImage');
         this.galleryWrapper.removeClass('big-image');
     },
 
-    registerEvents: function() {
+    registerEvents: function () {
         var self = this;
 
-        $(this.photosContainer).on('click', '.image-link', function(e) {
+        $(this.photosContainer).on('click', '.image-link', function (e) {
             e.preventDefault();
 
             var src = $(this).attr('href');
@@ -127,14 +132,14 @@ GalleryApp.Gallery.prototype = {
 
                 self.showBigImage();
 
-                img.load(function(){
+                img.load(function () {
                     img.show();
                 })
             }
         });
 
 
-        $(this.bigPhotoContainer).on('click', function() {
+        $(this.bigPhotoContainer).on('click', function () {
             self.hideBigImage();
         });
     }
@@ -152,11 +157,11 @@ GalleryApp.Photo = function (flickrObject) {
 
 GalleryApp.Photo.prototype = {
 
-    getTitle: function() {
+    getTitle: function () {
         return this.props.title;
     },
 
-    getUserLink : function () {
+    getUserLink: function () {
         var template = 'http://www.flickr.com/photos/{{owner}}/{{id}}';
         return GalleryApp.TemplateEngine.process(template, {
             owner: this.props.owner,
@@ -164,13 +169,13 @@ GalleryApp.Photo.prototype = {
         });
     },
 
-    getImageThumb: function() {
+    getImageThumb: function () {
         return this.props.sizes[1].source;
     },
 
-    getOriginalImage: function() {
+    getOriginalImage: function () {
         var bestImageSizeIndex = 8;
-        for (var i = bestImageSizeIndex; i>=0, i--;) {
+        for (var i = bestImageSizeIndex; i >= 0, i--;) {
             if (this.props.sizes[i] != undefined && this.props.sizes[i].source != undefined) {
                 return this.props.sizes[i].source;
             }
@@ -199,7 +204,7 @@ GalleryApp.FlickrApi = function () {
         $.extend(data, params);
 
         return $.ajax({
-            url: 'https://api.flickr.com/services/rest/',
+            url: 'https://api.flickr.c1om/services/rest/',
             dataType: 'jsonp',
             data: data,
             jsonp: 'jsoncallback'
@@ -207,37 +212,67 @@ GalleryApp.FlickrApi = function () {
     }
 };
 
-GalleryApp.FlickrApi.prototype.getRecentPhotos = function (imagesCount) {
+GalleryApp.FlickrApi.prototype = {
 
-    var self = this;
+    getRecentPhotos: function (imagesCount) {
+        GalleryApp.Loggger.log('getRecentPhotos');
 
-    return this._apiCall(this.methods.recent, {per_page:imagesCount}).then(function(result) {
-        var photos = result.photos.photo;
-        var promise = $.when();
+        var dfd = new $.Deferred();
 
-        $.each(photos, function(index, photo) {
-            promise = promise.then(function () {
-                return self._apiCall(self.methods.size, {photo_id:photo.id});
-            }).then(function(r) {
-                GalleryApp.Loggger.log('Get photo sizes: ');
-                GalleryApp.Loggger.log(r);
-                photo.sizes = r.sizes.size;
-                GalleryApp.Loggger.log('Get Photo size.. print photo object. Size count is - ');
-                GalleryApp.Loggger.log(photo);
-            });
+        var self = this;
+
+        this._apiCall(this.methods.recent, {per_page: imagesCount}).done(
+            function (result) {
+
+                var photos = result.photos.photo;
+
+                var promises = [];
+                $.map(photos, function (photo) {
+                    promises.push(
+                        self.getPhotoSizes(photo)
+                    );
+                });
+
+
+                $.when.apply($, promises).then(
+                    function () {
+                        GalleryApp.Loggger.log(arguments);
+                        dfd.resolve(arguments);
+                    },
+                    function (r) {
+                        GalleryApp.Loggger.log('failed request');
+                        GalleryApp.Loggger.log(r);
+                        dfd.fail(r);
+                    }
+                );
+            }
+        ).fail(function(jqXHR, textStatus, errorThrown) {
+                dfd.fail(jqXHR, textStatus, errorThrown);
         });
 
-        return promise.then(function() {
-            return photos;
+        return dfd;
+    },
+
+    getPhotoSizes: function (object) {
+        var dfd = new $.Deferred();
+
+        this._apiCall(this.methods.size, {photo_id: object.id}).then(function (result) {
+            if (result.stat == "ok" && Array.isArray(result.sizes.size)) {
+                object.sizes = result.sizes.size;
+                dfd.resolve(object);
+            } else {
+                dfd.reject(result);
+            }
         });
-    });
+
+        return dfd;
+    }
 };
 
 
+GalleryApp.TemplateEngine = {
 
-GalleryApp.TemplateEngine  = {
-
-    process : function(template, data) {
+    process: function (template, data) {
         var reg = /{{([\w]+)}}/gi;
 
         return template.replace(reg, function (match, param) {
@@ -250,7 +285,7 @@ GalleryApp.TemplateEngine  = {
 
 GalleryApp.Loggger = {
     debug: true,
-    log:  function(str) {
+    log: function (str) {
         if (this.debug && window.console) {
             console.log(str);
         }
