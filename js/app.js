@@ -3,8 +3,9 @@ var GalleryApp = GalleryApp || {};
 
 
 /**
- * @param  element jQuery Selector or string
+ * Main application class. Generate html, register all events, store images.
  * @constructor
+ * @param  element jQuery Selector or string
  * @param params
  */
 GalleryApp.Gallery = function (element, params) {
@@ -92,25 +93,29 @@ GalleryApp.Gallery.prototype = {
     },
 
     showLoader: function() {
+        GalleryApp.Loggger.log('showLoader');
         this.photosContainer.addClass('-loading');
     },
 
     hideLoader: function() {
+        GalleryApp.Loggger.log('hideLoader');
         this.photosContainer.removeClass('-loading');
     },
 
     showBigImage: function() {
+        GalleryApp.Loggger.log('showBigImage');
         this.galleryWrapper.addClass('big-image');
     },
 
     hideBigImage: function() {
+        GalleryApp.Loggger.log('hideBigImage');
         this.galleryWrapper.removeClass('big-image');
     },
 
     registerEvents: function() {
         var self = this;
 
-        $('.image-link', this.photosContainer).on('click', function(e) {
+        $(this.photosContainer).on('click', '.image-link', function(e) {
             e.preventDefault();
 
             var src = $(this).attr('href');
@@ -136,7 +141,11 @@ GalleryApp.Gallery.prototype = {
 };
 
 
-
+/**
+ * Represents photo object. Store flickr object as property. Give access to params via getters.
+ * @param flickrObject json, representing flick object with sizes
+ * @constructor
+ */
 GalleryApp.Photo = function (flickrObject) {
     this.props = flickrObject;
 };
@@ -169,7 +178,10 @@ GalleryApp.Photo.prototype = {
     }
 };
 
-
+/**
+ * FlickApi use to gather information from flickr.
+ * @constructor
+ */
 GalleryApp.FlickrApi = function () {
 
     this.methods = {
