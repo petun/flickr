@@ -1,57 +1,75 @@
 var GalleryApp = GalleryApp || {};
 
 
-GalleryApp.Gallery = function () {
+GalleryApp.Gallery = function (element) {
+    this.wrapper = typeof element == 'string' ? $(element) : element;
     this.photos = [];
-
-
 };
 
 GalleryApp.Gallery.prototype = {
-    init: function() {
+    init:  function(params) {
+        var api = new GalleryApp.FlickrApi();
 
+        var self = this;
+
+        $.when(api.getRecentPhotos()).then(function(flickrObjects){
+            console.log(flickrObjects);
+
+            if (flickrObjects) {
+                $.each(flickrObjects, function(index, photo) {
+                    self.addPhoto(GalleryApp.CreatePhoto(photo));
+                });
+
+                if (params.onSuccess) {
+                    self.generateHtml();
+                    self.registerEvents();
+                    params.onSuccess();
+                }
+
+            } else {
+                if (params.onError) {
+                    params.onError();
+                }
+            }
+        });
+    },
+
+    addPhoto: function (photo) {
+        this.photos.push(photo);
+    },
+
+    generateHtml: function () {
+        console.log('generate HTML');
+
+        var self = this;
+        this.photos.forEach(function (photo) {
+            self.wrapper.append('<div class="image"><a class="image-link" href="'+photo.getOriginalImage()+'"><img src="' + photo.getImageThumb() + '" alt="" /></a><p>"' + photo.title + '</p><p><a target="_blank" href="' + photo.getUserLink() + '">>> More</a></p></div>');
+        });
+
+        self.wrapper.append('<div class="hover-image -hidden"><img src="" alt="" /><p><a href="#">Close Dialog</a></p></div>');
+    },
+
+    registerEvents: function() {
+        var self = this;
+        $('.image-link', self.wrapper).on('click', function(e) {
+            e.preventDefault();
+            $('.hover-image img', self.wrapper).attr('src', '');
+            var src = $(this).attr('href');
+            if (src) {
+                $('.hover-image img', self.wrapper).attr('src', src);
+                $('.hover-image').removeClass('-hidden');
+            }
+        });
+
+
+        $('.hover-image a, .hover-image img', self.wrapper).on('click', function() {
+            $('.hover-image').addClass('-hidden');
+        });
     }
 };
 
-GalleryApp.Gallery.prototype.addPhoto = function (photo) {
-    this.photos.push(photo);
-};
-
-GalleryApp.Gallery.prototype.generateHtml = function () {
-    console.log('generate HTML');
-    var table = $('#gallery');
-
-    this.photos.forEach(function (photo) {
-        table.append('<div class="image"><img src="' + photo.getImageThumb() + '" alt="" /><p>"' + photo.title + '</p><p><a target="_blank" href="' + photo.getUserLink() + '">>> More</a></p></div>');
-    });
-};
-
-GalleryApp.Gallery.prototype.getRecentPhotos = function(params) {
-    var api = new GalleryApp.FlickrApi();
-
-    var self = this;
-
-    $.when(api.getRecentPhotos()).then(function(flickrObjects){
-        console.log(flickrObjects);
-
-        if (flickrObjects) {
-            $.each(flickrObjects, function(index, photo) {
-                self.addPhoto(GalleryApp.CreatePhoto(photo));
-            });
-
-            if (params.onSuccess) {
-                params.onSuccess();
-            }
-
-        } else {
-            if (params.onError) {
-                params.onError();
-            }
-        }
-    });
 
 
-};
 
 
 GalleryApp.Photo = function () {
@@ -68,7 +86,7 @@ GalleryApp.Photo.prototype = {
     },
 
     getOriginalImage: function() {
-        return this.sizes[5].source;
+        return this.sizes[7].source;
     }
 };
 
@@ -76,9 +94,8 @@ GalleryApp.Photo.prototype = {
 GalleryApp.FlickrApi = function () {
 
     this.methods = {
-        recent: 'flickr.photos.getRecent', //https://www.flickr.com/services/api/explore/flickr.photos.getRecent
-        size: 'flickr.photos.getSizes', //
-        info: 'flickr.photos.getInfo' //https://www.flickr.com/services/api/explore/flickr.photos.getInfo
+        recent: 'flickr.photos.getRecent',
+        size: 'flickr.photos.getSizes'
     };
 
 
@@ -121,11 +138,6 @@ GalleryApp.FlickrApi.prototype.getRecentPhotos = function () {
         });
     });
 };
-
-GalleryApp.FlickrApi.prototype.getPhotoInfo = function () {
-
-};
-
 
 GalleryApp.CreatePhoto = function (flickrObject) {
     var basePhoto = new GalleryApp.Photo();

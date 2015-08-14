@@ -1,22 +1,14 @@
 $(function(){
-
-    var gallery = new GalleryApp.Gallery('#div-selector');
-
+    var gallery = new GalleryApp.Gallery('#gallery');
     $('.loader').removeClass('-hidden');
-    gallery.getRecentPhotos({
 
+    gallery.init({
         onSuccess: function() {
             $('.loader').addClass('-hidden');
-
-            gallery.generateHtml();
         },
 
         onError: function() {
             console.log('onError callback call');
         }
     });
-
-
-
-
 });

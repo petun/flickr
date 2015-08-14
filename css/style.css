@@ -32,7 +32,8 @@ h1 {
 
 
 #gallery {
- margin-left: -20px;
+    margin-left: -20px;
+    position: relative;
 }
 
 
@@ -41,4 +42,23 @@ h1 {
     width: 150px;
     display: inline-block;
     vertical-align: top;
+}
+
+.hover-image {
+    cursor: pointer;
+    position: absolute;
+    top: 0;
+    left: 20px;
+    width: 900px;
+    text-align: center;
+    background-color: #DEDEDE;
+    padding: 20px 0;
+    transition: 1s;
+}
+.hover-image img {
+    max-width: 100%;
+}
+
+.hover-image.-hidden {
+    left: -3000px;
 }
