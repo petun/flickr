@@ -1,53 +1,55 @@
 var GalleryApp = GalleryApp || {};
 
 
+
 /**
- * @param element jQuery Selector or string
+ * @param  element jQuery Selector or string
  * @constructor
+ * @param params
  */
-GalleryApp.Gallery = function (element) {
+GalleryApp.Gallery = function (element, params) {
+
+    var defaults = {per_page: 20, debug: true};
+
     this.wrapper = typeof element == 'string' ? $(element) : element;
     this.photos = [];
+    this.api = new GalleryApp.FlickrApi();
+
+    this.params = $.extend({}, defaults, params);
+
+    GalleryApp.Loggger.debug = this.params.debug;
 
     this.galleryWrapper = null;
     this.photosContainer = null;
     this.bigPhotoContainer = null;
 };
-// todo - добавить кол-ко фоток в конструктор
 
 
 GalleryApp.Gallery.prototype = {
-    /**
-     * @param params Json with callbacks. onSuccess, onError
-     */
-    init:  function(params) {
+
+    init:  function() {
+        var self = this;
 
         this.generateHtmlWrappers();
 
-        var self = this;
+        this.showLoader();
 
-        this.photosContainer.addClass('-loading');
+        $.when(this.api.getRecentPhotos(this.params.per_page)).then(function(flickrObjects){
 
-        var api = new GalleryApp.FlickrApi();
+            self.hideLoader();
 
-        $.when(api.getRecentPhotos()).then(function(flickrObjects){
+            GalleryApp.Loggger.log('Get All Flickr Objects');
+            GalleryApp.Loggger.log(flickrObjects);
 
-            self.photosContainer.removeClass('-loading');
-
-            console.log('Get All Flickr Objects');
-            console.log(flickrObjects);
-
-            if (flickrObjects) {
+            if (Array.isArray(flickrObjects)) {
 
                 $.each(flickrObjects, function(index, photo) {
-                    self.addPhoto( GalleryApp.CreatePhoto(photo) );
+                    self.addPhoto(new GalleryApp.Photo(photo) );
                 });
 
                 self.generatePhotosHtml();
                 self.registerEvents();
 
-            } else {
-                //todo error
             }
         });
     },
@@ -59,16 +61,50 @@ GalleryApp.Gallery.prototype = {
 
 
     generatePhotosHtml: function () {
+
+        GalleryApp.Loggger.log('generatePhotosHtml');
+
         var self = this;
         this.photos.forEach(function (photo) {
-            self.photosContainer.append('<div class="image"><a class="image-link" href="'+photo.getOriginalImage()+'"><img src="' + photo.getImageThumb() + '" alt="" /></a><p>"' + photo.title + '</p><p><a target="_blank" href="' + photo.getUserLink() + '">>> More</a></p></div>');
+            var template = '<div class="image">' +
+                '<a class="image-link" href="{{link}}"><img src="{{thumb}}" alt="" /></a>' +
+                '<p>{{title}}</p><p><a target="_blank" href="{{userLink}}">>> More</a></p>' +
+                '</div>';
+
+            self.photosContainer.append(
+                GalleryApp.TemplateEngine.process(template,
+                    {
+                        link: photo.getOriginalImage(),
+                        thumb: photo.getImageThumb(),
+                        userLink: photo.getUserLink(),
+                        title: photo.getTitle()
+                    })
+            );
         });
     },
 
     generateHtmlWrappers: function() {
+        GalleryApp.Loggger.log('generateHtmlWrappers');
+
         this.galleryWrapper =$('<div id="gallery"></div>').appendTo(this.wrapper);
         this.photosContainer = $('<div class="images"></div>').appendTo(this.galleryWrapper);
         this.bigPhotoContainer = $('<div class="big-image"><div class="big-image-container"><img src="" alt="" /></div><p><a href="#">Go Back</a></p></div>').appendTo(this.galleryWrapper);
+    },
+
+    showLoader: function() {
+        this.photosContainer.addClass('-loading');
+    },
+
+    hideLoader: function() {
+        this.photosContainer.removeClass('-loading');
+    },
+
+    showBigImage: function() {
+        this.galleryWrapper.addClass('big-image');
+    },
+
+    hideBigImage: function() {
+        this.galleryWrapper.removeClass('big-image');
     },
 
     registerEvents: function() {
@@ -76,7 +112,7 @@ GalleryApp.Gallery.prototype = {
 
         $('.image-link', this.photosContainer).on('click', function(e) {
             e.preventDefault();
-            // todo попробовать переделать на массив с картинками
+
             var src = $(this).attr('href');
 
             if (src) {
@@ -84,7 +120,7 @@ GalleryApp.Gallery.prototype = {
 
                 img.attr('src', src).hide();
 
-                self.galleryWrapper.addClass('big-image');
+                self.showBigImage();
 
                 img.load(function(){
                     img.show();
@@ -94,33 +130,40 @@ GalleryApp.Gallery.prototype = {
 
 
         $(this.bigPhotoContainer).on('click', function() {
-            $(self.galleryWrapper).removeClass('big-image');
+            self.hideBigImage();
         });
     }
 };
 
 
 
-
-
-GalleryApp.Photo = function () {
-
+GalleryApp.Photo = function (flickrObject) {
+    this.props = flickrObject;
 };
 
 GalleryApp.Photo.prototype = {
+
+    getTitle: function() {
+        return this.props.title;
+    },
+
     getUserLink : function () {
-        return 'http://www.flickr.com/photos/<user>/<photoid>'.replace('<user>', this.owner).replace('<photoid>', this.id);
+        var template = 'http://www.flickr.com/photos/{{owner}}/{{id}}';
+        return GalleryApp.TemplateEngine.process(template, {
+            owner: this.props.owner,
+            id: this.props.id
+        });
     },
 
     getImageThumb: function() {
-        return this.sizes[1].source;
+        return this.props.sizes[1].source;
     },
 
     getOriginalImage: function() {
         var bestImageSizeIndex = 8;
         for (var i = bestImageSizeIndex; i>=0, i--;) {
-            if (this.sizes[i] != undefined) {
-                return this.sizes[i].source;
+            if (this.props.sizes[i] != undefined && this.props.sizes[i].source != undefined) {
+                return this.props.sizes[i].source;
             }
         }
     }
@@ -152,11 +195,11 @@ GalleryApp.FlickrApi = function () {
     }
 };
 
-GalleryApp.FlickrApi.prototype.getRecentPhotos = function () {
+GalleryApp.FlickrApi.prototype.getRecentPhotos = function (imagesCount) {
 
     var self = this;
 
-    return this._apiCall(this.methods.recent, {per_page:10}).then(function(result) {
+    return this._apiCall(this.methods.recent, {per_page:imagesCount}).then(function(result) {
         var photos = result.photos.photo;
         var promise = $.when();
 
@@ -164,11 +207,11 @@ GalleryApp.FlickrApi.prototype.getRecentPhotos = function () {
             promise = promise.then(function () {
                 return self._apiCall(self.methods.size, {photo_id:photo.id});
             }).then(function(r) {
-                console.log('Get photo sizes: ');
-                console.log(r);
+                GalleryApp.Loggger.log('Get photo sizes: ');
+                GalleryApp.Loggger.log(r);
                 photo.sizes = r.sizes.size;
-                console.log('Get Photo size.. print photo object. Size count is - ');
-                console.log(photo);
+                GalleryApp.Loggger.log('Get Photo size.. print photo object. Size count is - ');
+                GalleryApp.Loggger.log(photo);
             });
         });
 
@@ -178,7 +221,28 @@ GalleryApp.FlickrApi.prototype.getRecentPhotos = function () {
     });
 };
 
-GalleryApp.CreatePhoto = function (flickrObject) {
-    var basePhoto = new GalleryApp.Photo();
-    return $.extend(basePhoto, flickrObject);
+
+
+GalleryApp.TemplateEngine  = {
+
+    process : function(template, data) {
+        var reg = /{{([\w]+)}}/gi;
+
+        return template.replace(reg, function (match, param) {
+            return data[param] || '';
+        });
+    }
+
 };
+
+
+GalleryApp.Loggger = {
+    debug: true,
+    log:  function(str) {
+        if (this.debug && window.console) {
+            console.log(str);
+        }
+    }
+};
+
+
