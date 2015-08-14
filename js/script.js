@@ -1,5 +1,5 @@
 $(function(){
-    var gallery = new GalleryApp.Gallery('#gallery');
+    var gallery = new GalleryApp.Gallery('.gallery-container');
     $('.loader').removeClass('-hidden');
 
     gallery.init({

@@ -3,6 +3,10 @@ body {
     font-family: Arial, "Helvetica Neue", sans-serif;
 }
 
+* {
+    box-sizing: border-box;
+}
+
 h1 {
     font-size: 20px;
     margin: 0 0 20px;
@@ -31,34 +35,41 @@ h1 {
 }
 
 
-#gallery {
-    margin-left: -20px;
-    position: relative;
+.gallery-container {
+    overflow: hidden;
 }
 
 
-#gallery .image {
+#gallery {
+    overflow: hidden;
+    position: relative;
+    width: 1800px;
+    left: 0;
+    transition: 0.7s;
+}
+
+#gallery.big-image {
+    left: -900px;
+}
+
+
+
+#gallery .images {
+    float: left;
+    width: 900px;
+}
+#gallery .images .image {
     margin-left: 20px;
     width: 150px;
     display: inline-block;
     vertical-align: top;
 }
 
-.hover-image {
-    cursor: pointer;
-    position: absolute;
-    top: 0;
-    left: 20px;
+#gallery .big-image {
+    float: left;
     width: 900px;
+    cursor: pointer;
     text-align: center;
     background-color: #DEDEDE;
     padding: 20px 0;
-    transition: 1s;
-}
-.hover-image img {
-    max-width: 100%;
-}
-
-.hover-image.-hidden {
-    left: -3000px;
 }

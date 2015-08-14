@@ -39,14 +39,17 @@ GalleryApp.Gallery.prototype = {
     },
 
     generateHtml: function () {
-        console.log('generate HTML');
-
         var self = this;
+
+        var galleryWrapper = self.wrapper.append('<div id="gallery"></div>'); //todo переделать
+        var photoHolder = $('#gallery').append('<div class="images"></div>');
+        var bigPhoto = $('#gallery').append('<div class="big-image"><img src="" alt="" /><p><a href="#">Go Back</a></p></div>');
+
         this.photos.forEach(function (photo) {
-            self.wrapper.append('<div class="image"><a class="image-link" href="'+photo.getOriginalImage()+'"><img src="' + photo.getImageThumb() + '" alt="" /></a><p>"' + photo.title + '</p><p><a target="_blank" href="' + photo.getUserLink() + '">>> More</a></p></div>');
+            $('#gallery .images').append('<div class="image"><a class="image-link" href="'+photo.getOriginalImage()+'"><img src="' + photo.getImageThumb() + '" alt="" /></a><p>"' + photo.title + '</p><p><a target="_blank" href="' + photo.getUserLink() + '">>> More</a></p></div>');
         });
 
-        self.wrapper.append('<div class="hover-image -hidden"><img src="" alt="" /><p><a href="#">Close Dialog</a></p></div>');
+        self.wrapper.append('');
     },
 
     registerEvents: function() {
@@ -56,14 +59,17 @@ GalleryApp.Gallery.prototype = {
             $('.hover-image img', self.wrapper).attr('src', '');
             var src = $(this).attr('href');
             if (src) {
-                $('.hover-image img', self.wrapper).attr('src', src);
-                $('.hover-image').removeClass('-hidden');
+                $('.big-image img', self.wrapper).attr('src', src);
+
+                $('.big-image img', self.wrapper).load(function () {
+                    $('#gallery', self.wrapper).addClass('big-image');
+                });
             }
         });
 
 
-        $('.hover-image a, .hover-image img', self.wrapper).on('click', function() {
-            $('.hover-image').addClass('-hidden');
+        $('.big-image a, .big-image img', self.wrapper).on('click', function() {
+            $('#gallery', self.wrapper).removeClass('big-image');
         });
     }
 };
@@ -120,7 +126,7 @@ GalleryApp.FlickrApi.prototype.getRecentPhotos = function () {
 
     var self = this;
 
-    return this._apiCall(this.methods.recent, {per_page:2}).then(function(result) {
+    return this._apiCall(this.methods.recent, {per_page:10}).then(function(result) {
         var photos = result.photos.photo;
         var promise = $.when();
 
