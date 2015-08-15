@@ -9,13 +9,15 @@ var GalleryApp = GalleryApp || {};
  */
 GalleryApp.Gallery = function (element, params) {
 
-    var defaults = {per_page: 20};
+    this.params = {per_page: 20};
 
     this.wrapper = typeof element == 'string' ? $(element) : element;
     this.photos = [];
     this.api = new GalleryApp.FlickrApi();
 
-    this.params = $.extend({}, defaults, params);
+    if (typeof (params) == 'object') {
+        this.params = $.extend({}, this.params, params);
+    }
 
     this.galleryWrapper = null;
     this.photosContainer = null;
@@ -204,7 +206,7 @@ GalleryApp.FlickrApi = function () {
         $.extend(data, params);
 
         return $.ajax({
-            url: 'https://api.flickr.c1om/services/rest/',
+            url: 'https://api.flickr.com/services/rest/',
             dataType: 'jsonp',
             data: data,
             jsonp: 'jsoncallback'
@@ -214,6 +216,11 @@ GalleryApp.FlickrApi = function () {
 
 GalleryApp.FlickrApi.prototype = {
 
+    /**
+     * Get recent photos ffrom flickr API and attach photos size
+     * @param imagesCount
+     * @returns {Deferred}
+     */
     getRecentPhotos: function (imagesCount) {
         GalleryApp.Loggger.log('getRecentPhotos');
 
@@ -229,7 +236,7 @@ GalleryApp.FlickrApi.prototype = {
                 var promises = [];
                 $.map(photos, function (photo) {
                     promises.push(
-                        self.getPhotoSizes(photo)
+                        self.attachPhotoSizes(photo)
                     );
                 });
 
@@ -253,7 +260,12 @@ GalleryApp.FlickrApi.prototype = {
         return dfd;
     },
 
-    getPhotoSizes: function (object) {
+    /**
+     * Attach photos sizes to exist object
+     * @param object Flickr object
+     * @returns {Deferred}
+     */
+    attachPhotoSizes: function (object) {
         var dfd = new $.Deferred();
 
         this._apiCall(this.methods.size, {photo_id: object.id}).then(function (result) {
