@@ -30,6 +30,8 @@ GalleryApp.Gallery.prototype = {
     init: function () {
         var self = this;
 
+        this.registerErrorHandlers();
+
         this.generateHtmlWrappers();
 
         this.showLoader();
@@ -51,8 +53,6 @@ GalleryApp.Gallery.prototype = {
                 self.registerEvents();
 
             }
-        }, function (jqXHR, textStatus, errorThrown) {
-            this.showError('Failed to complete request. Try again later. <a href=".">Refresh then page</a>');
         });
     },
 
@@ -122,7 +122,7 @@ GalleryApp.Gallery.prototype = {
     registerEvents: function () {
         var self = this;
 
-        $(this.photosContainer).on('click', '.image-link', function (e) {
+        this.photosContainer.on('click', '.image-link', function (e) {
             e.preventDefault();
 
             var src = $(this).attr('href');
@@ -141,8 +141,15 @@ GalleryApp.Gallery.prototype = {
         });
 
 
-        $(this.bigPhotoContainer).on('click', function () {
+        this.bigPhotoContainer.on('click', function () {
             self.hideBigImage();
+        });
+    },
+
+    registerErrorHandlers: function() {
+        var self = this;
+        $(document).on('ajaxGalleryError', function() {
+            self.showError('Failed to complete request. Try again later. <a href=".">Refresh this page</a>');
         });
     }
 };
@@ -209,7 +216,12 @@ GalleryApp.FlickrApi = function () {
             url: 'https://api.flickr.com/services/rest/',
             dataType: 'jsonp',
             data: data,
-            jsonp: 'jsoncallback'
+            jsonp: 'jsoncallback',
+            timeout: 3000,
+            error: function() {
+                GalleryApp.Loggger.log('Failed to process current request. Method is ' + method);
+                $(document).trigger('ajaxGalleryError');
+            }
         });
     }
 };
