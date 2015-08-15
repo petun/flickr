@@ -6,6 +6,8 @@ git clone https://github.com/petun/flickr.git
 ```
 Next run **index.html** from your browser (not locally)
 
+Alternatively, you can download ZIP package from [this link](https://github.com/petun/flickr/archive/master.zip)
+
 ## Demo Page
 You can watch demo [here](http://dv.petun.ru/flickr/)
 

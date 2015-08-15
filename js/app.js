@@ -217,7 +217,7 @@ GalleryApp.FlickrApi = function () {
 GalleryApp.FlickrApi.prototype = {
 
     /**
-     * Get recent photos ffrom flickr API and attach photos size
+     * Get recent photos from flickr API and attach photos size
      * @param imagesCount
      * @returns {Deferred}
      */
@@ -261,7 +261,7 @@ GalleryApp.FlickrApi.prototype = {
     },
 
     /**
-     * Attach photos sizes to exist object
+     * Attach photo sizes to exist flickr photo object
      * @param object Flickr object
      * @returns {Deferred}
      */
